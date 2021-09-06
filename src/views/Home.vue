@@ -1,24 +1,33 @@
 <template>
-  <div>
+  <div class="topsetting">
     <Menu current="home"></Menu>
     <div class="ui main container">
       <!-- 基本的なコンテンツはここに記載する -->
       <div class="ui segment">
         <h2>{{ userData.nickName }} さん</h2>
-        <p v-if="userData.sex === 'female'"><i class="female icon"></i>女性</p>
-        <p v-else><i class="male icon"></i>男性</p>
-        <p>{{ userData.age }} 歳</p>
-        <!--  -->
         <div class="ui grid">
           <div class="ten wide column">
             <table class="ui celled table">
               <thead>
                 <tr>
                   <th>項目</th>
-                  <th>現在の数値</th>
+                  <th>データ</th>
                 </tr>
               </thead>
               <tbody>
+                <tr>
+                  <td data-label="Name">性別</td>
+                  <td data-label="Age">
+                    <p v-if="userData.sex === 'female'">
+                      <i class="female icon"></i>女性
+                    </p>
+                    <p v-else><i class="male icon"></i>男性</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td data-label="Name">年齢</td>
+                  <td data-label="Age">{{ userData.age }} 歳</td>
+                </tr>
                 <tr>
                   <td data-label="Name">体重</td>
                   <td data-label="Age">{{ userData.weight }} Kg</td>
@@ -31,9 +40,10 @@
             </table>
           </div>
           <div class="six wide column">
-            <div class="ui teal message">
-              <h4>今日の目標摂取・消費カロリー</h4>
-              <h1>10Kcal 摂取</h1>
+            <div :class="'ui message ' + bmi.bmiMessageColor">
+              <h3>あなたの状態</h3>
+              <h1>BMI値 : {{ bmi.bmi }}</h1>
+              <h2>あなたは {{ bmi.judgeBmi }} です。</h2>
             </div>
           </div>
         </div>
@@ -56,15 +66,20 @@
                 <div class="content">
                   <a class="author">エクササイズアドバイザー</a>
                   <div class="text">
-                    もう少し運動しましょう。以下の運動がおすすめです!!
-                    <ul>
-                      <li>
-                        <h3>ウォーキング</h3>
-                      </li>
-                      <li>
-                        <h3>スクワット</h3>
-                      </li>
-                    </ul>
+                    {{ bmi.bmiMessageExercise }}
+                    <div class="ui card">
+                      <div class="content">
+                        <h2 class="ui header">
+                          <div class="sub header">
+                            筋トレ
+                          </div>
+                          腕立て
+                          <div class="sub header">
+                            メッツ:3.8
+                          </div>
+                        </h2>
+                      </div>
+                    </div>
                     <a
                       @click="switchPage('Exercise')"
                       style="cursor: hand; cursor:pointer;"
@@ -87,15 +102,50 @@
                 <div class="content">
                   <a class="author">食のアドバイザー</a>
                   <div class="text">
-                    脂質の摂取を控えましょう。以下の食事がおすすめです!!
-                    <ul>
-                      <li>
-                        <h3>サラダ</h3>
-                      </li>
-                      <li>
-                        <h3>うどん</h3>
-                      </li>
-                    </ul>
+                    {{ bmi.bmiMessageFood }}
+                    <div class="ui card">
+                      <div class="content">
+                        <h2 class="ui header">
+                          朝食
+                          <div class="sub header">
+                            <div class="ui middle aligned divided list">
+                              <div class="item">
+                                <div class="right floated content">
+                                  0<span class="cardKcal"> Kcal</span>
+                                </div>
+                                <div class="content">
+                                  ごはん
+                                </div>
+                              </div>
+                              <div class="item">
+                                <div class="right floated content">
+                                  0<span class="cardKcal"> Kcal</span>
+                                </div>
+                                <div class="content">
+                                  豚の生姜焼き
+                                </div>
+                              </div>
+                              <div class="item">
+                                <div class="right floated content">
+                                  0<span class="cardKcal"> Kcal</span>
+                                </div>
+                                <div class="content">
+                                  サラダ
+                                </div>
+                              </div>
+                              <div class="item">
+                                <div class="right floated content">
+                                  0<span class="cardKcal"> Kcal</span>
+                                </div>
+                                <div class="content">
+                                  卵スープ
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </h2>
+                      </div>
+                    </div>
                     <a
                       @click="switchPage('Food')"
                       style="cursor: hand; cursor:pointer;"
@@ -120,6 +170,8 @@
 // @は/srcと同じ意味です
 // import something from '@/components/something.vue';
 import { baseUrl } from "@/assets/config.js";
+import BMI from "@/utils/bmi";
+import BmiMessage from "@/utils/bmiMessage";
 import Menu from "@/components/Menu.vue";
 import Footer from "@/components/Footer.vue";
 import Chart from "@/components/Chart.vue";
@@ -140,6 +192,13 @@ export default {
         text: null,
         category: null,
         err: null,
+      },
+      bmi: {
+        bmi: null,
+        judgeBmi: null,
+        bmiMessageFood: null,
+        bmiMessageExercise: null,
+        bmiMessageColor: null,
       },
       search: {
         username: "",
@@ -188,6 +247,19 @@ export default {
         // 成功したときの処理はここに記述する
         console.log(response.data.data);
         this.userData = response.data.data;
+
+        const bmi = BMI.calculationBMI(
+          response.data.data.weight,
+          response.data.data.height
+        );
+        this.bmi.bmi = Math.floor(bmi * 100) / 100;
+
+        const judgeBmi = BMI.judgeBMI(bmi);
+        this.bmi.judgeBmi = judgeBmi;
+
+        this.bmi.bmiMessageFood = BmiMessage.messageFood(bmi);
+        this.bmi.bmiMessageExercise = BmiMessage.messageExercise(bmi);
+        this.bmi.bmiMessageColor = BmiMessage.messageColor(bmi);
       })
       .catch((err) => {
         // レスポンスがエラーで返ってきたときの処理はここに記述する
@@ -367,5 +439,8 @@ export default {
 }
 .comment {
   font-size: 120%;
+}
+.cardKcal {
+  font-size: 70%;
 }
 </style>
